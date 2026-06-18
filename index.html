@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b2b44" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Equip Groceries" />
+    <meta name="description" content="Equip Groceries - Construction, Local Markets & Grocery Basket Price Monitoring" />
+    <title>Equip Groceries · Price Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js">
+    </script>
+
+    <style>
+        :root {
+            --navy: #0b2b44;
+            --navy-dk: #051a2b;
+            --navy-lt: #e4edf5;
+            --gold: #b49450;
+            --gold-dk: #8b7530;
+            --gold-lt: #faf5eb;
+            --teal: #1f5b5b;
+            --teal-lt: #e8f2f2;
+            --sage: #7e8c54;
+            --sage-lt: #f2f4ec;
+            --coral: #c44b4b;
+            --coral-lt: #fce8e8;
+            --white: #ffffff;
+            --grey-50: #f7f9fb;
+            --grey-100: #eef2f6;
+            --grey-200: #dce2e8;
+            --grey-300: #c4ccd4;
+            --grey-500: #5a6572;
+            --grey-700: #2d3748;
+            --text: #1a2633;
+            --axis: #3d4752;
+            --bg: #ecf0f4;
+            --radius: 14px;
+            --radius-sm: 10px;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+            --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.10);
+            --transition: 0.2s ease;
+            --sidebar-w: 250px;
+            --header-h: 60px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html {
+            font-size: 14.5px;
+            -webkit-tap-highlight-color: transparent;
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            background: none;
+            font: inherit;
+            color: inherit;
+        }
+        canvas {
+            max-width: 100%;
+        }
+
+        #app {
+            display: flex;
+            flex: 1;
+            min-height: 100vh;
+        }
+
+        #sidebar {
+            width: var(--sidebar-w);
+            flex-shrink: 0;
+            background: var(--navy);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 200;
+            transition: transform var(--transition);
+            box-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
+            overflow-y: auto;
+        }
+        #sidebar.collapsed {
+            transform: translateX(calc(-1 * var(--sidebar-w)));
+        }
+
+        .sidebar-brand {
+            padding: 16px 14px;
+            background: var(--white);
+            margin: 10px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 2px solid var(--navy);
+            flex-shrink: 0;
+        }
+        .sidebar-brand-icon {
+            width: 38px;
+            height: 38px;
+            background: var(--gold);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+        .sidebar-brand-text {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.25;
+            letter-spacing: 0.01em;
+        }
+        .sidebar-brand-text span {
+            color: var(--gold-dk);
+            font-size: 0.68rem;
+            font-weight: 500;
+        }
+
+        .sidebar-status {
+            padding: 8px 16px 4px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .sidebar-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+        .sidebar-status span {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+        }
+
+        nav {
+            flex: 1;
+            padding: 8px 0;
+            overflow-y: auto;
+        }
+        .nav-section {
+            margin-bottom: 2px;
+        }
+        .nav-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.35);
+            padding: 10px 18px 3px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.84rem;
+            font-weight: 500;
+            margin: 1px 8px;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition);
+            cursor: pointer;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+        }
+        .nav-item.active {
+            background: var(--gold);
+            color: #fff;
+            font-weight: 700;
+        }
+        .nav-item svg {
+            flex-shrink: 0;
+            opacity: 0.75;
+            width: 16px;
+            height: 16px;
+        }
+
+        .sidebar-footer {
+            padding: 12px 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.66rem;
+            color: rgba(255, 255, 255, 0.35);
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-w);
+            right: 0;
+            height: var(--header-h);
+            background: var(--white);
+            border-bottom: 1px solid var(--grey-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+            transition: left var(--transition);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+        }
+        #topbar.full {
+            left: 0;
+        }
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        #menu-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--navy);
+            transition: background var(--transition);
+            font-size: 1.1rem;
+        }
+        #menu-btn:hover {
+            background: var(--grey-100);
+        }
+        #page-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 5px 11px;
+            border-radius: 20px;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+        .badge-navy {
+            background: var(--navy);
+            color: #fff;
+        }
+        .badge-gold {
+            background: var(--gold);
+            color: #fff;
+        }
+        .badge-teal {
+            background: var(--teal);
+            color: #fff;
+        }
+        #last-updated {
+            font-size: 0.66rem;
+            color: var(--grey-500);
+            white-space: nowrap;
+        }
+
+        #main {
+            flex: 1;
+            margin-left: var(--sidebar-w);
+            padding-top: var(--header-h);
+            transition: margin-left var(--transition);
+            min-width: 0;
+        }
+        #main.full {
+            margin-left: 0;
+        }
+        .page {
+            display: none;
+            padding: 24px 22px 48px;
+            animation: fadeSlideIn 0.3s ease;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes fadeSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        #overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 150;
+        }
+        #overlay.visible {
+            display: block;
+        }
+
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 14px;
+        }
+        #loading-overlay.hidden {
+            display: none;
+        }
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--grey-200);
+            border-top-color: var(--navy);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        #loading-text {
+            font-weight: 600;
+            color: var(--navy);
+            font-size: 0.85rem;
+        }
+
+        /* Skeleton loading for charts */
+        .skeleton-chart {
+            background: linear-gradient(90deg, #eef2f6 25%, #dce2e8 50%, #eef2f6 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-sm);
+            width: 100%;
+            height: 100%;
+        }
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 18px 20px;
+            border: 1px solid var(--grey-200);
+        }
+        .card-title {
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--grey-700);
+            margin-bottom: 12px;
+        }
+        .card-title span {
+            color: var(--navy);
+            font-weight: 800;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .stat-tile {
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            border: none;
+            color: #fff;
+            transition: transform 0.2s ease;
+        }
+        .stat-tile:hover {
+            transform: translateY(-2px);
+        }
+        .stat-tile.navy {
+            background: var(--navy);
+        }
+        .stat-tile.gold {
+            background: var(--gold);
+        }
+        .stat-tile.teal {
+            background: var(--teal);
+        }
+        .stat-tile.coral {
+            background: var(--coral);
+        }
+        .stat-tile.sage {
+            background: var(--sage);
+        }
+        .stat-label {
+            font-size: 0.66rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .stat-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.1;
+            transition: all 0.3s ease;
+        }
+        .stat-sub {
+            font-size: 0.68rem;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+            width: 100%;
+            margin-bottom: 18px;
+        }
+
+        .page-hdr {
+            margin-bottom: 20px;
+        }
+        .page-hdr h1 {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--navy);
+        }
+        .page-hdr p {
+            font-size: 0.78rem;
+            color: var(--grey-500);
+            margin-top: 3px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 200px;
+        }
+        .chart-wrapper.h200 {
+            min-height: 200px;
+        }
+        .chart-wrapper.h250 {
+            min-height: 250px;
+        }
+        .chart-wrapper.h300 {
+            min-height: 300px;
+        }
+        .chart-wrapper.h350 {
+            min-height: 350px;
+        }
+        .chart-wrapper.h400 {
+            min-height: 400px;
+        }
+        .chart-wrapper canvas {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .chart-wrapper canvas.ready {
+            opacity: 1;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+        thead th {
+            text-align: left;
+            padding: 10px 10px;
+            font-size: 0.64rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--grey-700);
+            border-bottom: 2px solid var(--grey-200);
+            white-space: nowrap;
+            background: var(--grey-50);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        tbody td {
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--grey-100);
+            vertical-align: middle;
+            color: var(--text);
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        tbody tr:hover td {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        tbody tr {
+            transition: background 0.15s ease;
+        }
+        .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+        }
+        .tag {
+            display: inline-block;
+            font-size: 0.66rem;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 14px;
+            white-space: nowrap;
+            margin: 1px 2px;
+        }
+        .tag-navy {
+            background: var(--navy-lt);
+            color: var(--navy);
+        }
+        .tag-gold {
+            background: var(--gold-lt);
+            color: var(--gold-dk);
+        }
+        .tag-teal {
+            background: var(--teal-lt);
+            color: var(--teal);
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+            align-items: center;
+        }
+        .filter-bar label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--grey-700);
+            white-space: nowrap;
+        }
+        .filter-bar select {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--grey-300);
+            background: var(--white);
+            color: var(--text);
+            font-weight: 500;
+            cursor: pointer;
+            min-width: 120px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .filter-bar select:focus {
+            outline: none;
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(11, 43, 68, 0.1);
+        }
+        .filter-bar select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-refresh {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 6px;
+            background: var(--navy);
+            color: #fff;
+            cursor: pointer;
+            transition: all var(--transition);
+            border: none;
+            white-space: nowrap;
+        }
+        .btn-refresh:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
+        }
+        .btn-refresh:active {
+            opacity: 0.7;
+            transform: scale(0.98);
+        }
+        .btn-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .data-source-note {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.66rem;
+            font-weight: 600;
+            color: var(--grey-500);
+            background: var(--grey-50);
+            padding: 5px 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border-left: 3px solid var(--gold);
+        }
+
+        .no-data {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--grey-500);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --sidebar-w: 240px;
+            }
+            #sidebar {
+                transform: translateX(calc(-1 * var(--sidebar-w)));
+            }
+            #sidebar.open {
+                transform: translateX(0);
+            }
+            #topbar {
+                left: 0 !important;
+            }
+            #main {
+                margin-left: 0 !important;
+            }
+            .page {
+                padding: 16px 10px 40px;
+            }
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .stat-value {
+                font-size: 1.35rem;
+            }
+            .stat-tile {
+                padding: 12px 14px;
+            }
+            .grid-2,
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            .card {
+                padding: 14px 14px;
+            }
+            .chart-wrapper.h300 {
+                min-height: 240px;
+            }
+            .chart-wrapper.h350 {
+                min-height: 270px;
+            }
+            .chart-wrapper.h400 {
+                min-height: 300px;
+            }
+            table {
+                font-size: 0.7rem;
+            }
+            thead th,
+            tbody td {
+                padding: 6px 8px;
+            }
+            #page-title {
+                font-size: 0.9rem;
+            }
+            .badge {
+                font-size: 0.6rem;
+                padding: 4px 8px;
+            }
+            #last-updated {
+                font-size: 0.58rem;
+            }
+        }
+        @media (max-width: 400px) {
+            .stat-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .stat-tile {
+                padding: 10px 11px;
+            }
+            .stat-value {
+                font-size: 1.2rem;
+            }
+            .topbar-right {
+                gap: 4px;
+            }
+            .badge {
+                padding: 3px 6px;
+                font-size: 0.55rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Loading data from Google Sheets...</div>
+    </div>
+
+    <div id="overlay"></div>
+
+    <div id="app">
+        <aside id="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">🛒</div>
+                <div class="sidebar-brand-text">Equip Groceries<br><span>Price Monitoring</span></div>
+            </div>
+            <div class="sidebar-status">
+                <div class="sidebar-status-dot"></div>
+                <span>Live Data · Google Sheets</span>
+            </div>
+            <nav>
+                <div class="nav-section">
+                    <div class="nav-label">Overview</div>
+                    <div class="nav-item active" data-page="overview" onclick="navigate(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        Dashboard
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-label">Price Data</div>
+                    <div class="nav-item" data-page="construction" onclick="navigate(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20h20"/><path d="M5 20V8l7-5 7 5v12"/></svg>
+                        Construction
+                    </div>
+                    <div class="nav-item" data-page="localmarkets" onclick="navigate(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M3 10h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V10z"/></svg>
+                        Local Markets
+                    </div>
+                    <div class="nav-item" data-page="groceries" onclick="navigate(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/></svg>
+                        Groceries Basket
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-label">Analysis</div>
+                    <div class="nav-item" data-page="trends" onclick="navigate(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Price Trends
+                    </div>
+                    <div class="nav-item" data-page="compare" onclick="navigate(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        Location Compare
+                    </div>
+                </div>
+            </nav>
+            <div class="sidebar-footer">Equip Groceries · 2025/2026</div>
+        </aside>
+
+        <header id="topbar">
+            <div class="topbar-left">
+                <button id="menu-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+                <span id="page-title">Dashboard</span>
+            </div>
+            <div class="topbar-right">
+                <span id="last-updated">Loading...</span>
+                <span class="badge badge-navy" id="badge-entries">0 entries</span>
+                <button class="btn-refresh" id="btn-refresh-top" onclick="refreshAllData()" title="Refresh data">⟳ Refresh</button>
+            </div>
+        </header>
+
+        <main id="main">
+            <!-- Overview Page -->
+            <section id="page-overview" class="page active">
+                <div class="page-hdr"><h1>Equip Groceries Overview</h1><p>Construction materials, local market food prices & grocery basket monitoring</p></div>
+                <div class="stat-grid" id="overview-stats"></div>
+                <div class="grid-2">
+                    <div class="card"><div class="card-title">Latest <span>Cement Prices</span></div><div class="chart-wrapper h250"><canvas id="chartOverviewCement"></canvas></div></div>
+                    <div class="card"><div class="card-title">Key Food <span>Price Comparison</span></div><div class="chart-wrapper h250"><canvas id="chartOverviewFood"></canvas></div></div>
+                </div>
+                <div class="card full-width"><div class="card-title">Recent <span>Data Entries</span></div><div class="table-wrap" id="overview-recent-table"></div></div>
+            </section>
+
+            <!-- Construction Page -->
+            <section id="page-construction" class="page">
+                <div class="page-hdr"><h1>Construction Materials</h1><p>Cement price tracking across locations</p></div>
+                <div class="data-source-note">Source: Construction Materials Google Sheet</div>
+                <div class="filter-bar">
+                    <label>Location:</label><select id="filter-construction-location"><option value="all">All Locations</option></select>
+                    <label>Brand:</label><select id="filter-construction-brand"><option value="all">All Brands</option></select>
+                </div>
+                <div class="stat-grid" id="construction-stats"></div>
+                <div class="grid-2">
+                    <div class="card"><div class="card-title">Cement Price <span>Trend</span></div><div class="chart-wrapper h300"><canvas id="chartCementTrend"></canvas></div></div>
+                    <div class="card"><div class="card-title">Price by <span>Location</span></div><div class="chart-wrapper h300"><canvas id="chartCementLocation"></canvas></div></div>
+                </div>
+                <div class="card full-width"><div class="card-title">All <span>Construction Records</span></div><div class="table-wrap" id="construction-table"></div></div>
+            </section>
+
+            <!-- Local Markets Page -->
+            <section id="page-localmarkets" class="page">
+                <div class="page-hdr"><h1>Local Market Prices</h1><p>Food commodity prices from local markets</p></div>
+                <div class="data-source-note">Source: Local Markets Google Sheet</div>
+                <div class="filter-bar">
+                    <label>Location:</label><select id="filter-market-location"><option value="all">All Locations</option></select>
+                    <label>Product:</label><select id="filter-market-product"><option value="all">All Products</option></select>
+                </div>
+                <div class="stat-grid" id="market-stats"></div>
+                <div class="grid-2">
+                    <div class="card"><div class="card-title">Product Price <span>Comparison</span></div><div class="chart-wrapper h350"><canvas id="chartMarketProducts"></canvas></div></div>
+                    <div class="card"><div class="card-title">Price by <span>Location</span></div><div class="chart-wrapper h350"><canvas id="chartMarketLocation"></canvas></div></div>
+                </div>
+                <div class="card full-width"><div class="card-title">Market Price <span>Records</span></div><div class="table-wrap" id="market-table"></div></div>
+            </section>
+
+            <!-- Groceries Page -->
+            <section id="page-groceries" class="page">
+                <div class="page-hdr"><h1>Groceries Basket</h1><p>Supermarket branded product prices</p></div>
+                <div class="data-source-note">Source: Groceries Basket Google Sheet</div>
+                <div class="filter-bar">
+                    <label>Store:</label><select id="filter-grocery-store"><option value="all">All Stores</option></select>
+                    <label>Product:</label><select id="filter-grocery-product"><option value="all">All Products</option></select>
+                </div>
+                <div class="stat-grid" id="grocery-stats"></div>
+                <div class="grid-2">
+                    <div class="card"><div class="card-title">Product Price <span>Range</span></div><div class="chart-wrapper h350"><canvas id="chartGroceryProducts"></canvas></div></div>
+                    <div class="card"><div class="card-title">Store <span>Comparison</span></div><div class="chart-wrapper h350"><canvas id="chartGroceryStores"></canvas></div></div>
+                </div>
+                <div class="card full-width"><div class="card-title">Grocery <span>Records</span></div><div class="table-wrap" id="grocery-table"></div></div>
+            </section>
+
+            <!-- Trends Page -->
+            <section id="page-trends" class="page">
+                <div class="page-hdr"><h1>Price Trends</h1><p>Track price changes over time across all datasets</p></div>
+                <div class="filter-bar">
+                    <label>Dataset:</label><select id="filter-trends-dataset"><option value="construction">Construction - Cement</option><option value="markets">Local Markets - Food</option><option value="groceries">Groceries Basket</option></select>
+                    <label>Product:</label><select id="filter-trends-product"><option value="all">Loading...</option></select>
+                </div>
+                <div class="card full-width"><div class="card-title">Price <span>Trend Over Time</span></div><div class="chart-wrapper h400"><canvas id="chartTrends"></canvas></div></div>
+                <div class="card full-width" id="trends-stats-card"></div>
+            </section>
+
+            <!-- Compare Page -->
+            <section id="page-compare" class="page">
+                <div class="page-hdr"><h1>Location Comparison</h1><p>Compare prices across different locations</p></div>
+                <div class="filter-bar">
+                    <label>Dataset:</label><select id="filter-compare-dataset"><option value="construction">Construction</option><option value="markets">Local Markets</option><option value="groceries">Groceries Basket</option></select>
+                    <label>Product:</label><select id="filter-compare-product"><option value="all">Loading...</option></select>
+                </div>
+                <div class="card full-width"><div class="card-title">Price <span>by Location</span></div><div class="chart-wrapper h400"><canvas id="chartCompare"></canvas></div></div>
+                <div class="card full-width" id="compare-table-card"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        /* ═══════════════════════════════════════════════════════════
+           CONFIGURATION - Replace with your published Google Sheets CSV URLs
+        ═══════════════════════════════════════════════════════════ */
+        const CONFIG = {
+            constructionSheetURL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2NXMDIXvt7qoiQyuUnYBF7ACqPyQZKcRZUm7A32HwnqYYgc4LX_rziLSuo8y_rKVtRsSyY8ntlJ5y/pub?gid=2080112419&single=true&output=csv',
+            localMarketsSheetURL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2NXMDIXvt7qoiQyuUnYBF7ACqPyQZKcRZUm7A32HwnqYYgc4LX_rziLSuo8y_rKVtRsSyY8ntlJ5y/pub?gid=1510501093&single=true&output=csv',
+            groceriesBasketSheetURL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2NXMDIXvt7qoiQyuUnYBF7ACqPyQZKcRZUm7A32HwnqYYgc4LX_rziLSuo8y_rKVtRsSyY8ntlJ5y/pub?gid=719955637&single=true&output=csv',
+
+
+
+            currency: 'MK',
+            autoRefreshInterval: 0,
+        };
+
+        /* ═══════════════════════════════════════════════════════════
+           GLOBAL STATE & CHART REGISTRY
+        ═══════════════════════════════════════════════════════════ */
+        let APP_DATA = {
+            construction: null,
+            localMarkets: null,
+            groceriesBasket: null,
+            lastUpdated: null,
+            totalEntries: 0,
+        };
+
+        // Central chart registry for clean destruction
+        const CHART_REGISTRY = {};
+
+        function registerChart(key, chartInstance) {
+            if (CHART_REGISTRY[key]) {
+                try { CHART_REGISTRY[key].destroy(); } catch (e) {}
+            }
+            CHART_REGISTRY[key] = chartInstance;
+        }
+
+        function destroyChart(key) {
+            if (CHART_REGISTRY[key]) {
+                try { CHART_REGISTRY[key].destroy(); } catch (e) {}
+                delete CHART_REGISTRY[key];
+            }
+        }
+
+        function destroyAllCharts() {
+            Object.keys(CHART_REGISTRY).forEach(key => destroyChart(key));
+        }
+
+        function destroyChartsWithPrefix(prefix) {
+            Object.keys(CHART_REGISTRY).forEach(key => {
+                if (key.startsWith(prefix)) destroyChart(key);
+            });
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           CHART DEFAULTS
+        ═══════════════════════════════════════════════════════════ */
+        Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+        Chart.defaults.font.size = 11;
+        Chart.defaults.color = '#3d4752';
+        Chart.defaults.plugins.legend.display = false;
+        Chart.defaults.animation = true;
+        Chart.defaults.animations = {
+            numbers: { duration: 500, easing: 'easeOutQuart' },
+            colors: { duration: 400, easing: 'easeOutQuart' },
+        };
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+
+        const COLORS = {
+            navy: '#0b2b44',
+            gold: '#b49450',
+            teal: '#1f5b5b',
+            coral: '#c44b4b',
+            sage: '#7e8c54',
+            navyLt: '#3d6a8d',
+            goldLt: '#d4bc7a',
+            tealLt: '#4a8a8a',
+            grey: '#8899aa',
+        };
+
+        /* ═══════════════════════════════════════════════════════════
+           UTILITY FUNCTIONS
+        ═══════════════════════════════════════════════════════════ */
+        function debounce(fn, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        function showSkeleton(selector) {
+            const el = document.querySelector(selector);
+            if (el && !el.querySelector('.skeleton-chart')) {
+                el.innerHTML = '<div class="skeleton-chart"></div>';
+            }
+        }
+
+        function hideSkeleton(selector) {
+            const el = document.querySelector(selector);
+            if (el) {
+                const skel = el.querySelector('.skeleton-chart');
+                if (skel) skel.remove();
+            }
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            const cleaned = String(dateStr).trim().replace(/\s+/g, ' ');
+            let match = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+            match = cleaned.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+            const d = new Date(cleaned);
+            return !isNaN(d.getTime()) ? d : null;
+        }
+
+        function parseNumber(val) {
+            if (val === '' || val === null || val === undefined) return null;
+            const cleaned = String(val).replace(/[^\d.-]/g, '').trim();
+            if (cleaned === '' || cleaned === '-') return null;
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? null : num;
+        }
+
+        function formatCurrency(num) {
+            if (num === null || num === undefined || isNaN(num)) return '-';
+            return num.toLocaleString('en-US');
+        }
+
+        function formatDate(d) {
+            if (!d) return '-';
+            if (typeof d === 'string') {
+                const p = parseDate(d);
+                if (p) d = p;
+                else return d;
+            }
+            if (d instanceof Date && !isNaN(d)) {
+                return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            }
+            return String(d);
+        }
+
+        function populateSelect(selectId, options, keepValue = true) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            const currentVal = keepValue ? select.value : 'all';
+            select.innerHTML = '<option value="all">All</option>';
+            options.forEach(opt => {
+                select.innerHTML += `<option value="${opt}">${opt}</option>`;
+            });
+            if (options.includes(currentVal)) select.value = currentVal;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           CSV FETCHING & PARSING
+        ═══════════════════════════════════════════════════════════ */
+        async function fetchCSV(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            return await response.text();
+        }
+
+        function parseCSV(csvText) {
+            const lines = [];
+            let current = '';
+            let inQuotes = false;
+            for (const char of csvText) {
+                if (char === '"') { inQuotes = !inQuotes; } else if (char === '\n' && !inQuotes) { lines.push(current);
+                    current = ''; } else { current += char; }
+            }
+            if (current) lines.push(current);
+
+            const parseLine = (line) => {
+                const result = [];
+                let field = '';
+                let quoted = false;
+                for (const char of line) {
+                    if (char === '"') { quoted = !quoted; } else if (char === ',' && !quoted) { result.push(field.trim());
+                        field = ''; } else { field += char; }
+                }
+                result.push(field.trim());
+                return result;
+            };
+
+            const headers = parseLine(lines[0]);
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseLine(lines[i]);
+                if (values.length === 0 || (values.length === 1 && values[0] === '')) continue;
+                const row = {};
+                headers.forEach((h, idx) => { row[h] = values[idx] !== undefined ? values[idx] : ''; });
+                const hasData = Object.values(row).some(v => v !== '' && v !== '0');
+                if (hasData) data.push(row);
+            }
+            return { headers, data };
+        }
+
+        function parseConstructionData(rawData) {
+            return rawData.map(row => ({
+                timestamp: parseDate(row['Timestamp']),
+                responder: row['Responder'] || '',
+                dateRecorded: parseDate(row['Date Recorded '] || row['Date Recorded'] || row['Date Recorded']),
+                location: row['Location'] || '',
+                cementPrice: parseNumber(row['CEMENT (50KG)']),
+                cementBrand: row['CEMENT BRAND'] || '',
+                comments: row['Comments on any recorded products'] || '',
+            })).filter(r => r.dateRecorded !== null || r.timestamp !== null);
+        }
+
+        function parseLocalMarketsData(rawData) {
+            const productColumns = [
+                'TOMATOES (1 BUCKET)', 'IRISH POTATOES (1 BUCKET)', 'USIPA (BONYA) (PER BUNCH)',
+                'RICE (PER KG)', 'UFA (PER KG)', 'GREEN VEGETABLES (PER BUNCH)',
+                'ONIONS (BUNCH)', 'GROUNDNUTS (PER KG)', 'SWEET POTATO ',
+                'BANANA (PER BUNCH)', 'BROILER CHICKEN', 'EGGS (TRAY OF 30)',
+                'BEEF (PER KG)', 'GOAT (PER KG)', 'PORK (PER KG)', 'BEANS (PER KG)',
+                'ONIONS (PER KG)'
+            ];
+            const records = [];
+            rawData.forEach(row => {
+                const dateRecorded = parseDate(row['Date Recorded '] || row['Date Recorded'] || row['Date Recorded']);
+                const timestamp = parseDate(row['Timestamp']);
+                const location = row['Location'] || '';
+                const responder = row['Responder'] || '';
+                productColumns.forEach(col => {
+                    const price = parseNumber(row[col]);
+                    if (price !== null && price > 0 && price < 1000000) { // filter obvious outliers
+                        const productName = col.replace(/\s*\(.*?\)\s*/g, '').trim();
+                        records.push({ timestamp, dateRecorded, location, responder, product: productName,
+                            price, rawProductCol: col });
+                    }
+                });
+            });
+            return records;
+        }
+
+        function parseGroceriesBasketData(rawData) {
+            const excludeCols = ['Timestamp', 'Responder', 'LOCATION', 'Comments on any recorded products'];
+            const productColumns = Object.keys(rawData[0] || {}).filter(k => !excludeCols.includes(k));
+            const records = [];
+            rawData.forEach(row => {
+                const timestamp = parseDate(row['Timestamp']);
+                const location = row['LOCATION'] || row['Location'] || '';
+                const responder = row['Responder'] || '';
+                productColumns.forEach(col => {
+                    const price = parseNumber(row[col]);
+                    if (price !== null && price > 0) {
+                        records.push({ timestamp, responder, location, product: col.trim(), price,
+                            comments: row['Comments on any recorded products'] || '' });
+                    }
+                });
+            });
+            return records;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           DATA LOADING
+        ═══════════════════════════════════════════════════════════ */
+        async function loadAllData() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            loadingOverlay.classList.remove('hidden');
+            loadingText.textContent = 'Loading construction data...';
+
+            try {
+                const [csv1, csv2, csv3] = await Promise.all([
+                    fetchCSV(CONFIG.constructionSheetURL),
+                    fetchCSV(CONFIG.localMarketsSheetURL),
+                    fetchCSV(CONFIG.groceriesBasketSheetURL),
+                ]);
+
+                loadingText.textContent = 'Parsing data...';
+                const parsed1 = parseCSV(csv1);
+                const parsed2 = parseCSV(csv2);
+                const parsed3 = parseCSV(csv3);
+
+                APP_DATA.construction = parseConstructionData(parsed1.data);
+                APP_DATA.localMarkets = parseLocalMarketsData(parsed2.data);
+                APP_DATA.groceriesBasket = parseGroceriesBasketData(parsed3.data);
+                APP_DATA.lastUpdated = new Date();
+                APP_DATA.totalEntries = APP_DATA.construction.length + APP_DATA.localMarkets.length + APP_DATA
+                    .groceriesBasket.length;
+
+                document.getElementById('last-updated').textContent =
+                    'Updated: ' + APP_DATA.lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById('badge-entries').textContent = APP_DATA.totalEntries.toLocaleString() +
+                ' entries';
+
+                populateAllFilters();
+                const activePage = document.querySelector('.page.active');
+                if (activePage) {
+                    const pageId = activePage.id.replace('page-', '');
+                    buildPage(pageId);
+                }
+                loadingOverlay.classList.add('hidden');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                loadingText.textContent = 'Error loading data. Check console. Retrying...';
+                loadingText.style.color = '#c44b4b';
+                setTimeout(() => { loadingOverlay.classList.add('hidden'); }, 4000);
+            }
+        }
+
+        function refreshAllData() {
+            destroyAllCharts();
+            const btn = document.getElementById('btn-refresh-top');
+            if (btn) { btn.disabled = true;
+                btn.textContent = '⟳ Loading...'; }
+            loadAllData().finally(() => {
+                if (btn) { btn.disabled = false;
+                    btn.textContent = '⟳ Refresh'; }
+            });
+        }
+
+        function populateAllFilters() {
+            if (APP_DATA.construction) {
+                populateSelect('filter-construction-location', [...new Set(APP_DATA.construction.map(r => r.location)
+                    .filter(Boolean))].sort());
+                populateSelect('filter-construction-brand', [...new Set(APP_DATA.construction.map(r => r.cementBrand)
+                    .filter(Boolean))].sort());
+            }
+            if (APP_DATA.localMarkets) {
+                populateSelect('filter-market-location', [...new Set(APP_DATA.localMarkets.map(r => r.location).filter(
+                    Boolean))].sort());
+                populateSelect('filter-market-product', [...new Set(APP_DATA.localMarkets.map(r => r.product).filter(
+                    Boolean))].sort());
+            }
+            if (APP_DATA.groceriesBasket) {
+                populateSelect('filter-grocery-store', [...new Set(APP_DATA.groceriesBasket.map(r => r.location).filter(
+                    Boolean))].sort());
+                populateSelect('filter-grocery-product', [...new Set(APP_DATA.groceriesBasket.map(r => r.product).filter(
+                    Boolean))].sort());
+            }
+            buildTrendsProductFilter();
+            buildCompareProductFilter();
+        }
+
+        function buildTrendsProductFilter() {
+            const dataset = document.getElementById('filter-trends-dataset')?.value || 'construction';
+            const select = document.getElementById('filter-trends-product');
+            if (!select) return;
+            let products = [];
+            if (dataset === 'construction') products = ['CEMENT (50KG)'];
+            else if (dataset === 'markets' && APP_DATA.localMarkets) products = [...new Set(APP_DATA.localMarkets.map(r =>
+                r.product))].sort();
+            else if (dataset === 'groceries' && APP_DATA.groceriesBasket) products = [...new Set(APP_DATA
+                .groceriesBasket.map(r => r.product))].sort();
+            populateSelect('filter-trends-product', products, false);
+            if (products.length === 1) select.value = products[0];
+        }
+
+        function buildCompareProductFilter() {
+            const dataset = document.getElementById('filter-compare-dataset')?.value || 'construction';
+            const select = document.getElementById('filter-compare-product');
+            if (!select) return;
+            let products = [];
+            if (dataset === 'construction') products = ['CEMENT (50KG)'];
+            else if (dataset === 'markets' && APP_DATA.localMarkets) products = [...new Set(APP_DATA.localMarkets.map(r =>
+                r.product))].sort();
+            else if (dataset === 'groceries' && APP_DATA.groceriesBasket) products = [...new Set(APP_DATA
+                .groceriesBasket.map(r => r.product))].sort();
+            populateSelect('filter-compare-product', products, false);
+            if (products.length === 1) select.value = products[0];
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           NAVIGATION
+        ═══════════════════════════════════════════════════════════ */
+        const pageTitles = {
+            overview: 'Dashboard',
+            construction: 'Construction',
+            localmarkets: 'Local Markets',
+            groceries: 'Groceries Basket',
+            trends: 'Price Trends',
+            compare: 'Location Compare',
+        };
+
+        function navigate(el) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+            const pageId = el.dataset.page;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const pageEl = document.getElementById('page-' + pageId);
+            if (pageEl) pageEl.classList.add('active');
+            document.getElementById('page-title').textContent = pageTitles[pageId] || '';
+            if (window.innerWidth <= 768) closeSidebar();
+            buildPage(pageId);
+        }
+
+        function buildPage(pageId) {
+            destroyChartsWithPrefix(pageId + '-');
+            switch (pageId) {
+                case 'overview':
+                    buildOverviewPage();
+                    break;
+                case 'construction':
+                    buildConstructionPage();
+                    break;
+                case 'localmarkets':
+                    buildLocalMarketsPage();
+                    break;
+                case 'groceries':
+                    buildGroceriesPage();
+                    break;
+                case 'trends':
+                    buildTrendsPage();
+                    break;
+                case 'compare':
+                    buildComparePage();
+                    break;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           SAFE CHART CREATION HELPER
+        ═══════════════════════════════════════════════════════════ */
+        function createChartSafely(chartKey, canvasId, config) {
+            destroyChart(chartKey);
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return null;
+            const ctx = canvas.getContext('2d');
+            const wrapper = canvas.closest('.chart-wrapper');
+            if (wrapper && wrapper.querySelector('.skeleton-chart')) {
+                hideSkeleton('#' + canvasId.replace('chart', '') + ' .chart-wrapper');
+            }
+            const chart = new Chart(ctx, config);
+            registerChart(chartKey, chart);
+            // Add ready class for smooth fade-in
+            setTimeout(() => { canvas.classList.add('ready'); }, 50);
+            return chart;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           DEBOUNCED FILTER HANDLERS
+        ═══════════════════════════════════════════════════════════ */
+        const debouncedBuildConstruction = debounce(() => buildConstructionPage(), 150);
+        const debouncedBuildLocalMarkets = debounce(() => buildLocalMarketsPage(), 150);
+        const debouncedBuildGroceries = debounce(() => buildGroceriesPage(), 150);
+        const debouncedBuildTrends = debounce(() => buildTrendsPage(), 150);
+        const debouncedBuildCompare = debounce(() => buildComparePage(), 150);
+
+        function setupFilterListeners() {
+            // Construction filters
+            document.getElementById('filter-construction-location')?.addEventListener('change',
+            debouncedBuildConstruction);
+            document.getElementById('filter-construction-brand')?.addEventListener('change',
+            debouncedBuildConstruction);
+
+            // Local Markets filters
+            document.getElementById('filter-market-location')?.addEventListener('change',
+            debouncedBuildLocalMarkets);
+            document.getElementById('filter-market-product')?.addEventListener('change',
+            debouncedBuildLocalMarkets);
+
+            // Groceries filters
+            document.getElementById('filter-grocery-store')?.addEventListener('change', debouncedBuildGroceries);
+            document.getElementById('filter-grocery-product')?.addEventListener('change', debouncedBuildGroceries);
+
+            // Trends filters
+            document.getElementById('filter-trends-dataset')?.addEventListener('change', function() {
+                buildTrendsProductFilter();
+                debouncedBuildTrends();
+            });
+            document.getElementById('filter-trends-product')?.addEventListener('change', debouncedBuildTrends);
+
+            // Compare filters
+            document.getElementById('filter-compare-dataset')?.addEventListener('change', function() {
+                buildCompareProductFilter();
+                debouncedBuildCompare();
+            });
+            document.getElementById('filter-compare-product')?.addEventListener('change', debouncedBuildCompare);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           OVERVIEW PAGE
+        ═══════════════════════════════════════════════════════════ */
+        function buildOverviewPage() {
+            const construction = APP_DATA.construction || [];
+            const markets = APP_DATA.localMarkets || [];
+            const groceries = APP_DATA.groceriesBasket || [];
+
+            const latestCement = construction.length > 0 ?
+                [...construction].sort((a, b) => (b.dateRecorded || b.timestamp) - (a.dateRecorded || a.timestamp))[0] :
+                null;
+            const cementAvg = construction.length > 0 ?
+                Math.round(construction.reduce((s, r) => s + (r.cementPrice || 0), 0) / construction.length) : 0;
+            const marketLocations = new Set(markets.map(r => r.location)).size;
+            const groceryStores = new Set(groceries.map(r => r.location)).size;
+            const totalRecords = construction.length + markets.length + groceries.length;
+
+            document.getElementById('overview-stats').innerHTML = `
+                <div class="stat-tile navy"><div class="stat-label">Total Records</div><div class="stat-value">${totalRecords.toLocaleString()}</div><div class="stat-sub">Across all datasets</div></div>
+                <div class="stat-tile gold"><div class="stat-label">Latest Cement</div><div class="stat-value">${latestCement ? formatCurrency(latestCement.cementPrice) : '-'}</div><div class="stat-sub">${latestCement ? formatDate(latestCement.dateRecorded) : 'No data'}</div></div>
+                <div class="stat-tile teal"><div class="stat-label">Market Locations</div><div class="stat-value">${marketLocations}</div><div class="stat-sub">Local markets tracked</div></div>
+                <div class="stat-tile sage"><div class="stat-label">Grocery Stores</div><div class="stat-value">${groceryStores}</div><div class="stat-sub">Supermarkets tracked</div></div>
+            `;
+
+            // Cement chart
+            const cementSorted = [...construction]
+                .filter(r => r.cementPrice && r.cementPrice > 0)
+                .sort((a, b) => (b.dateRecorded || b.timestamp) - (a.dateRecorded || a.timestamp))
+                .slice(0, 10).reverse();
+
+            if (cementSorted.length > 0) {
+                createChartSafely('overview-cement', 'chartOverviewCement', {
+                    type: 'bar',
+                    data: {
+                        labels: cementSorted.map(r => formatDate(r.dateRecorded || r.timestamp)),
+                        datasets: [{ data: cementSorted.map(r => r.cementPrice),
+                            backgroundColor: COLORS.navy, borderRadius: 6 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 600 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 10 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
+                            y: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                        },
+                    },
+                });
+            }
+
+            // Food comparison
+            const latestMarketDate = markets.length > 0 ?
+                markets.reduce((max, r) => (r.dateRecorded || r.timestamp) > max ? (r.dateRecorded || r.timestamp) :
+                    max, new Date(0)) : null;
+            const recentMarkets = latestMarketDate ?
+                markets.filter(r => (r.dateRecorded || r.timestamp)?.getTime() === latestMarketDate.getTime()) :
+                markets;
+            const productAvgs = {};
+            recentMarkets.forEach(r => {
+                if (!productAvgs[r.product]) productAvgs[r.product] = { sum: 0, count: 0 };
+                productAvgs[r.product].sum += r.price;
+                productAvgs[r.product].count++;
+            });
+            const productAvgArr = Object.entries(productAvgs)
+                .map(([product, { sum, count }]) => ({ product, avg: Math.round(sum / count) }))
+                .sort((a, b) => b.avg - a.avg).slice(0, 8);
+
+            if (productAvgArr.length > 0) {
+                createChartSafely('overview-food', 'chartOverviewFood', {
+                    type: 'bar',
+                    data: {
+                        labels: productAvgArr.map(p => p.product),
+                        datasets: [{ data: productAvgArr.map(p => p.avg), backgroundColor: COLORS.gold,
+                            borderRadius: 6 }],
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 600 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 10 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                            y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                        },
+                    },
+                });
+            }
+
+            // Recent table
+            const allRecent = [
+                ...construction.map(r => ({ ...r, dataset: 'Construction', displayDate: r.dateRecorded || r.timestamp,
+                    displayVal: r.cementPrice, displayProduct: 'CEMENT (50KG)', displayLocation: r.location })),
+                ...markets.map(r => ({ ...r, dataset: 'Local Market', displayDate: r.dateRecorded || r.timestamp,
+                    displayVal: r.price, displayProduct: r.product, displayLocation: r.location })),
+                ...groceries.map(r => ({ ...r, dataset: 'Groceries', displayDate: r.timestamp, displayVal: r.price,
+                    displayProduct: r.product, displayLocation: r.location })),
+            ].filter(r => r.displayDate).sort((a, b) => b.displayDate - a.displayDate).slice(0, 15);
+
+            document.getElementById('overview-recent-table').innerHTML = `
+                <table><thead><tr><th>Date</th><th>Dataset</th><th>Location</th><th>Product</th><th class="num">Price (MK)</th></tr></thead>
+                <tbody>${allRecent.map(r => `<tr><td>${formatDate(r.displayDate)}</td><td><span class="tag ${r.dataset==='Construction'?'tag-navy':r.dataset==='Local Market'?'tag-gold':'tag-teal'}">${r.dataset}</span></td><td>${r.displayLocation||'-'}</td><td>${r.displayProduct||'-'}</td><td class="num">${formatCurrency(r.displayVal)}</td></tr>`).join('')}</tbody></table>`;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           CONSTRUCTION PAGE
+        ═══════════════════════════════════════════════════════════ */
+        function buildConstructionPage() {
+            const locFilter = document.getElementById('filter-construction-location')?.value || 'all';
+            const brandFilter = document.getElementById('filter-construction-brand')?.value || 'all';
+            let data = [...(APP_DATA.construction || [])];
+            if (locFilter !== 'all') data = data.filter(r => r.location === locFilter);
+            if (brandFilter !== 'all') data = data.filter(r => r.cementBrand === brandFilter);
+            data.sort((a, b) => (b.dateRecorded || b.timestamp) - (a.dateRecorded || a.timestamp));
+
+            const validPrices = data.filter(r => r.cementPrice && r.cementPrice > 0);
+            const avgPrice = validPrices.length > 0 ? Math.round(validPrices.reduce((s, r) => s + r.cementPrice, 0) /
+                validPrices.length) : 0;
+            const minPrice = validPrices.length > 0 ? Math.min(...validPrices.map(r => r.cementPrice)) : 0;
+            const maxPrice = validPrices.length > 0 ? Math.max(...validPrices.map(r => r.cementPrice)) : 0;
+
+            document.getElementById('construction-stats').innerHTML = `
+                <div class="stat-tile navy"><div class="stat-label">Records</div><div class="stat-value">${data.length}</div><div class="stat-sub">Filtered entries</div></div>
+                <div class="stat-tile gold"><div class="stat-label">Average Price</div><div class="stat-value">${formatCurrency(avgPrice)}</div><div class="stat-sub">Per 50kg bag</div></div>
+                <div class="stat-tile teal"><div class="stat-label">Min Price</div><div class="stat-value">${formatCurrency(minPrice)}</div><div class="stat-sub">Lowest recorded</div></div>
+                <div class="stat-tile coral"><div class="stat-label">Max Price</div><div class="stat-value">${formatCurrency(maxPrice)}</div><div class="stat-sub">Highest recorded</div></div>
+            `;
+
+            // Trend chart
+            const trendData = [...data].filter(r => r.cementPrice && r.cementPrice > 0).reverse();
+            if (trendData.length > 0) {
+                createChartSafely('construction-trend', 'chartCementTrend', {
+                    type: 'line',
+                    data: {
+                        labels: trendData.map(r => formatDate(r.dateRecorded || r.timestamp)),
+                        datasets: [{ data: trendData.map(r => r.cementPrice), borderColor: COLORS.navy,
+                            backgroundColor: 'rgba(11,43,68,0.08)', fill: true, tension: 0.3, pointRadius: 5,
+                            pointBackgroundColor: COLORS.navy, borderWidth: 2.5 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 700 },
+                        plugins: { datalabels: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
+                            y: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                        },
+                    },
+                });
+            }
+
+            // Location chart
+            const locGroups = {};
+            data.filter(r => r.cementPrice && r.cementPrice > 0).forEach(r => {
+                if (!locGroups[r.location]) locGroups[r.location] = [];
+                locGroups[r.location].push(r.cementPrice);
+            });
+            const locAvgs = Object.entries(locGroups).map(([loc, prices]) => ({ location: loc, avg: Math.round(prices
+                    .reduce((s, p) => s + p, 0) / prices.length) }));
+            if (locAvgs.length > 0) {
+                const colorPalette = [COLORS.navy, COLORS.gold, COLORS.teal, COLORS.coral, COLORS.sage, COLORS.navyLt,
+                    COLORS.goldLt, COLORS.tealLt
+                ];
+                createChartSafely('construction-location', 'chartCementLocation', {
+                    type: 'bar',
+                    data: {
+                        labels: locAvgs.map(l => l.location),
+                        datasets: [{ data: locAvgs.map(l => l.avg), backgroundColor: locAvgs.map((_, i) =>
+                                colorPalette[i % colorPalette.length]), borderRadius: 6 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 600 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 10 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                        },
+                    },
+                });
+            }
+
+            // Table
+            document.getElementById('construction-table').innerHTML = `
+                <table><thead><tr><th>Date</th><th>Location</th><th>Brand</th><th class="num">Price (MK)</th><th>Responder</th><th>Comments</th></tr></thead>
+                <tbody>${data.map(r => `<tr><td>${formatDate(r.dateRecorded||r.timestamp)}</td><td><span class="tag tag-navy">${r.location||'-'}</span></td><td>${r.cementBrand||'-'}</td><td class="num">${formatCurrency(r.cementPrice)}</td><td>${r.responder||'-'}</td><td>${r.comments||'-'}</td></tr>`).join('')}</tbody></table>`;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           LOCAL MARKETS PAGE
+        ═══════════════════════════════════════════════════════════ */
+        function buildLocalMarketsPage() {
+            const locFilter = document.getElementById('filter-market-location')?.value || 'all';
+            const prodFilter = document.getElementById('filter-market-product')?.value || 'all';
+            let data = [...(APP_DATA.localMarkets || [])];
+            if (locFilter !== 'all') data = data.filter(r => r.location === locFilter);
+            if (prodFilter !== 'all') data = data.filter(r => r.product === prodFilter);
+
+            const uniqueProducts = new Set(data.map(r => r.product)).size;
+            const uniqueLocations = new Set(data.map(r => r.location)).size;
+            const validPrices = data.filter(r => r.price > 0);
+            const avgPrice = validPrices.length > 0 ? Math.round(validPrices.reduce((s, r) => s + r.price, 0) / validPrices
+                .length) : 0;
+
+            document.getElementById('market-stats').innerHTML = `
+                <div class="stat-tile navy"><div class="stat-label">Records</div><div class="stat-value">${data.length}</div><div class="stat-sub">Price entries</div></div>
+                <div class="stat-tile gold"><div class="stat-label">Products</div><div class="stat-value">${uniqueProducts}</div><div class="stat-sub">Tracked items</div></div>
+                <div class="stat-tile teal"><div class="stat-label">Locations</div><div class="stat-value">${uniqueLocations}</div><div class="stat-sub">Markets covered</div></div>
+                <div class="stat-tile sage"><div class="stat-label">Avg Price</div><div class="stat-value">${formatCurrency(avgPrice)}</div><div class="stat-sub">Across all products</div></div>
+            `;
+
+            // Products chart
+            const prodGroups = {};
+            data.filter(r => r.price > 0).forEach(r => {
+                if (!prodGroups[r.product]) prodGroups[r.product] = [];
+                prodGroups[r.product].push(r.price);
+            });
+            const prodAvgs = Object.entries(prodGroups).map(([prod, prices]) => ({ product: prod, avg: Math.round(prices
+                    .reduce((s, p) => s + p, 0) / prices.length) })).sort((a, b) => b.avg - a.avg).slice(0, 12);
+
+            if (prodAvgs.length > 0) {
+                createChartSafely('markets-products', 'chartMarketProducts', {
+                    type: 'bar',
+                    data: {
+                        labels: prodAvgs.map(p => p.product),
+                        datasets: [{ data: prodAvgs.map(p => p.avg), backgroundColor: COLORS.gold,
+                            borderRadius: 6 }],
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 600 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 10 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                            y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                        },
+                    },
+                });
+            }
+
+            // Location chart
+            const locPriceGroups = {};
+            data.filter(r => r.price > 0).forEach(r => {
+                if (!locPriceGroups[r.location]) locPriceGroups[r.location] = [];
+                locPriceGroups[r.location].push(r.price);
+            });
+            const locAvgs = Object.entries(locPriceGroups).map(([loc, prices]) => ({ location: loc, avg: Math.round(
+                    prices.reduce((s, p) => s + p, 0) / prices.length) }));
+            if (locAvgs.length > 0) {
+                createChartSafely('markets-location', 'chartMarketLocation', {
+                    type: 'bar',
+                    data: {
+                        labels: locAvgs.map(l => l.location),
+                        datasets: [{ data: locAvgs.map(l => l.avg), backgroundColor: COLORS.teal,
+                            borderRadius: 6 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 600 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 10 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                        },
+                    },
+                });
+            }
+
+            // Table
+            data.sort((a, b) => (b.dateRecorded || b.timestamp) - (a.dateRecorded || a.timestamp));
+            document.getElementById('market-table').innerHTML = `
+                <table><thead><tr><th>Date</th><th>Location</th><th>Product</th><th class="num">Price (MK)</th><th>Responder</th></tr></thead>
+                <tbody>${data.slice(0, 50).map(r => `<tr><td>${formatDate(r.dateRecorded||r.timestamp)}</td><td><span class="tag tag-gold">${r.location||'-'}</span></td><td>${r.product}</td><td class="num">${formatCurrency(r.price)}</td><td>${r.responder||'-'}</td></tr>`).join('')}</tbody></table>`;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           GROCERIES PAGE
+        ═══════════════════════════════════════════════════════════ */
+        function buildGroceriesPage() {
+            const storeFilter = document.getElementById('filter-grocery-store')?.value || 'all';
+            const prodFilter = document.getElementById('filter-grocery-product')?.value || 'all';
+            let data = [...(APP_DATA.groceriesBasket || [])];
+            if (storeFilter !== 'all') data = data.filter(r => r.location === storeFilter);
+            if (prodFilter !== 'all') data = data.filter(r => r.product === prodFilter);
+
+            const uniqueProducts = new Set(data.map(r => r.product)).size;
+            const uniqueStores = new Set(data.map(r => r.location)).size;
+            const validPrices = data.filter(r => r.price > 0);
+
+            document.getElementById('grocery-stats').innerHTML = `
+                <div class="stat-tile navy"><div class="stat-label">Records</div><div class="stat-value">${data.length}</div><div class="stat-sub">Price entries</div></div>
+                <div class="stat-tile gold"><div class="stat-label">Products</div><div class="stat-value">${uniqueProducts}</div><div class="stat-sub">Branded items</div></div>
+                <div class="stat-tile teal"><div class="stat-label">Stores</div><div class="stat-value">${uniqueStores}</div><div class="stat-sub">Supermarkets</div></div>
+                <div class="stat-tile coral"><div class="stat-label">Price Range</div><div class="stat-value">${validPrices.length>0?formatCurrency(Math.min(...validPrices.map(r=>r.price)))+' - '+formatCurrency(Math.max(...validPrices.map(r=>r.price))):'-'}</div><div class="stat-sub">Min - Max</div></div>
+            `;
+
+            // Products chart
+            const prodGroups = {};
+            data.filter(r => r.price > 0).forEach(r => {
+                if (!prodGroups[r.product]) prodGroups[r.product] = [];
+                prodGroups[r.product].push(r.price);
+            });
+            const prodRange = Object.entries(prodGroups).map(([prod, prices]) => ({ product: prod, avg: Math.round(prices
+                    .reduce((s, p) => s + p, 0) / prices.length) })).sort((a, b) => b.avg - a.avg).slice(0, 10);
+
+            if (prodRange.length > 0) {
+                createChartSafely('groceries-products', 'chartGroceryProducts', {
+                    type: 'bar',
+                    data: {
+                        labels: prodRange.map(p => p.product),
+                        datasets: [{ data: prodRange.map(p => p.avg), backgroundColor: COLORS.teal,
+                            borderRadius: 6 }],
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 600 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 9 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                            y: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                        },
+                    },
+                });
+            }
+
+            // Stores chart
+            const storeGroups = {};
+            data.filter(r => r.price > 0).forEach(r => {
+                if (!storeGroups[r.location]) storeGroups[r.location] = [];
+                storeGroups[r.location].push(r.price);
+            });
+            const storeAvgs = Object.entries(storeGroups).map(([store, prices]) => ({ store, avg: Math.round(prices.reduce(
+                    (s, p) => s + p, 0) / prices.length) }));
+            if (storeAvgs.length > 0) {
+                createChartSafely('groceries-stores', 'chartGroceryStores', {
+                    type: 'bar',
+                    data: {
+                        labels: storeAvgs.map(s => s.store),
+                        datasets: [{ data: storeAvgs.map(s => s.avg), backgroundColor: COLORS.sage,
+                            borderRadius: 6 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 600 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 10 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                        },
+                    },
+                });
+            }
+
+            // Table
+            data.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            document.getElementById('grocery-table').innerHTML = `
+                <table><thead><tr><th>Date</th><th>Store</th><th>Product</th><th class="num">Price (MK)</th><th>Responder</th></tr></thead>
+                <tbody>${data.slice(0, 50).map(r => `<tr><td>${formatDate(r.timestamp)}</td><td><span class="tag tag-teal">${r.location||'-'}</span></td><td>${r.product}</td><td class="num">${formatCurrency(r.price)}</td><td>${r.responder||'-'}</td></tr>`).join('')}</tbody></table>`;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           TRENDS PAGE
+        ═══════════════════════════════════════════════════════════ */
+        function buildTrendsPage() {
+            const dataset = document.getElementById('filter-trends-dataset')?.value || 'construction';
+            const product = document.getElementById('filter-trends-product')?.value || 'all';
+
+            let trendData = [];
+            if (dataset === 'construction') {
+                trendData = (APP_DATA.construction || []).filter(r => r.cementPrice && r.cementPrice > 0)
+                    .map(r => ({ date: r.dateRecorded || r.timestamp, price: r.cementPrice, product: 'CEMENT (50KG)',
+                        location: r.location }));
+            } else if (dataset === 'markets') {
+                trendData = (APP_DATA.localMarkets || []).filter(r => r.price > 0 && (product === 'all' || r.product ===
+                    product))
+                    .map(r => ({ date: r.dateRecorded || r.timestamp, price: r.price, product: r.product, location: r
+                            .location }));
+            } else if (dataset === 'groceries') {
+                trendData = (APP_DATA.groceriesBasket || []).filter(r => r.price > 0 && (product === 'all' || r.product ===
+                    product))
+                    .map(r => ({ date: r.timestamp, price: r.price, product: r.product, location: r.location }));
+            }
+
+            trendData.sort((a, b) => (a.date || 0) - (b.date || 0));
+            trendData = trendData.filter(r => r.date);
+
+            if (trendData.length > 0) {
+                createChartSafely('trends-main', 'chartTrends', {
+                    type: 'line',
+                    data: {
+                        labels: trendData.map(r => formatDate(r.date)),
+                        datasets: [{ data: trendData.map(r => r.price), borderColor: COLORS.navy,
+                            backgroundColor: 'rgba(11,43,68,0.06)', fill: true, tension: 0.3,
+                            pointRadius: 4, pointBackgroundColor: COLORS.navy, borderWidth: 2 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 800 },
+                        plugins: {
+                            datalabels: { display: false },
+                            tooltip: { callbacks: { label: ctx => formatCurrency(ctx.parsed.y) } },
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
+                            y: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                        },
+                    },
+                });
+
+                const prices = trendData.map(r => r.price);
+                const avg = Math.round(prices.reduce((s, p) => s + p, 0) / prices.length);
+                const min = Math.min(...prices);
+                const max = Math.max(...prices);
+                const first = prices[0];
+                const last = prices[prices.length - 1];
+                const change = last - first;
+                const changePct = first > 0 ? ((change / first) * 100).toFixed(1) : 'N/A';
+
+                document.getElementById('trends-stats-card').innerHTML = `
+                    <div class="card-title">Price <span>Summary</span></div>
+                    <div class="stat-grid">
+                        <div class="stat-tile navy"><div class="stat-label">Avg Price</div><div class="stat-value">${formatCurrency(avg)}</div></div>
+                        <div class="stat-tile gold"><div class="stat-label">Change</div><div class="stat-value">${change>=0?'+':''}${formatCurrency(change)}</div><div class="stat-sub">${changePct}%</div></div>
+                        <div class="stat-tile teal"><div class="stat-label">Min</div><div class="stat-value">${formatCurrency(min)}</div></div>
+                        <div class="stat-tile coral"><div class="stat-label">Max</div><div class="stat-value">${formatCurrency(max)}</div></div>
+                    </div>`;
+            } else {
+                document.getElementById('trends-stats-card').innerHTML =
+                    '<div class="no-data">No data available for the selected filters.</div>';
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           COMPARE PAGE
+        ═══════════════════════════════════════════════════════════ */
+        function buildComparePage() {
+            const dataset = document.getElementById('filter-compare-dataset')?.value || 'construction';
+            const product = document.getElementById('filter-compare-product')?.value || 'all';
+
+            let compareData = [];
+            if (dataset === 'construction') {
+                compareData = (APP_DATA.construction || []).filter(r => r.cementPrice && r.cementPrice > 0)
+                    .map(r => ({ location: r.location, price: r.cementPrice, product: 'CEMENT (50KG)' }));
+            } else if (dataset === 'markets') {
+                compareData = (APP_DATA.localMarkets || []).filter(r => r.price > 0 && (product === 'all' || r.product ===
+                    product))
+                    .map(r => ({ location: r.location, price: r.price, product: r.product }));
+            } else if (dataset === 'groceries') {
+                compareData = (APP_DATA.groceriesBasket || []).filter(r => r.price > 0 && (product === 'all' || r.product ===
+                    product))
+                    .map(r => ({ location: r.location, price: r.price, product: r.product }));
+            }
+
+            const locGroups = {};
+            compareData.forEach(r => {
+                if (!locGroups[r.location]) locGroups[r.location] = [];
+                locGroups[r.location].push(r.price);
+            });
+            const locStats = Object.entries(locGroups).map(([loc, prices]) => ({
+                location: loc,
+                avg: Math.round(prices.reduce((s, p) => s + p, 0) / prices.length),
+                min: Math.min(...prices),
+                max: Math.max(...prices),
+                count: prices.length,
+            })).sort((a, b) => b.avg - a.avg);
+
+            if (locStats.length > 0) {
+                const colors = [COLORS.navy, COLORS.gold, COLORS.teal, COLORS.coral, COLORS.sage, COLORS.navyLt, COLORS
+                    .goldLt, COLORS.tealLt
+                ];
+                createChartSafely('compare-chart', 'chartCompare', {
+                    type: 'bar',
+                    data: {
+                        labels: locStats.map(l => l.location),
+                        datasets: [{ data: locStats.map(l => l.avg), backgroundColor: locStats.map((_, i) =>
+                                colors[i % colors.length]), borderRadius: 6 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 700 },
+                        plugins: {
+                            datalabels: { anchor: 'end', align: 'end', formatter: v => formatCurrency(v),
+                                font: { weight: 'bold', size: 11 }, color: '#1a2633' },
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { color: '#dce2e8' }, ticks: { callback: v => formatCurrency(v) } },
+                        },
+                    },
+                });
+
+                document.getElementById('compare-table-card').innerHTML = `
+                    <div class="card-title">Location <span>Comparison Table</span></div>
+                    <div class="table-wrap">
+                        <table><thead><tr><th>Location</th><th class="num">Avg Price (MK)</th><th class="num">Min</th><th class="num">Max</th><th class="num">Entries</th></tr></thead>
+                        <tbody>${locStats.map(l => `<tr><td><strong>${l.location}</strong></td><td class="num">${formatCurrency(l.avg)}</td><td class="num">${formatCurrency(l.min)}</td><td class="num">${formatCurrency(l.max)}</td><td class="num">${l.count}</td></tr>`).join('')}</tbody></table>
+                    </div>`;
+            } else {
+                document.getElementById('compare-table-card').innerHTML =
+                    '<div class="no-data">No data available for comparison. Try different filters.</div>';
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           SIDEBAR TOGGLE
+        ═══════════════════════════════════════════════════════════ */
+        function toggleSidebar() {
+            if (window.innerWidth <= 768) {
+                const sb = document.getElementById('sidebar');
+                sb.classList.contains('open') ? closeSidebar() : openSidebar();
+            } else {
+                const sb = document.getElementById('sidebar');
+                const main = document.getElementById('main');
+                const tb = document.getElementById('topbar');
+                if (sb.classList.contains('collapsed')) {
+                    sb.classList.remove('collapsed');
+                    main.classList.remove('full');
+                    tb.classList.remove('full');
+                } else {
+                    sb.classList.add('collapsed');
+                    main.classList.add('full');
+                    tb.classList.add('full');
+                }
+                setTimeout(() => { Object.values(CHART_REGISTRY).forEach(chart => { if (chart && chart.resize) chart
+                        .resize(); }); }, 300);
+            }
+        }
+
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('overlay').classList.add('visible');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('overlay').classList.remove('visible');
+        }
+        document.getElementById('overlay').addEventListener('click', closeSidebar);
+
+        // Resize handler
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                Object.values(CHART_REGISTRY).forEach(chart => { if (chart && chart.resize) chart.resize(); });
+            }, 200);
+        });
+
+        /* ═══════════════════════════════════════════════════════════
+           INIT
+        ═══════════════════════════════════════════════════════════ */
+        setupFilterListeners();
+        loadAllData();
+
+        if (CONFIG.autoRefreshInterval > 0) {
+            setInterval(refreshAllData, CONFIG.autoRefreshInterval);
+        }
+
+        console.log('🛒 Equip Groceries Dashboard Ready');
+        console.log('📋 Replace CONFIG sheet URLs with your published Google Sheets CSV links');
+        console.log('✅ Smooth filtering enabled with debouncing & chart registry');
+    </script>
+</body>
+</html>
