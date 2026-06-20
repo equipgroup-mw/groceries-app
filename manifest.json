@@ -1,0 +1,27 @@
+{
+  "name": "Equip Groceries",
+  "short_name": "Groceries",
+  "description": "Construction, Local Markets & Grocery Basket Price Monitoring",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d2136",
+  "theme_color": "#a8935a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/appLogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/appLogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "utilities"],
+  "lang": "en-US",
+  "scope": "/"
+}
