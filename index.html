@@ -9,6 +9,14 @@
     <meta name="apple-mobile-web-app-title" content="Equip Groceries" />
     <meta name="description" content="Equip Groceries - Construction, Local Markets & Grocery Basket Price Monitoring" />
     <title>Equip Groceries · Price Dashboard</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json" />
+    
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/browser.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/appLogo.png" />
+    <link rel="apple-touch-icon" href="assets/appLogo.png" />
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js">
     </script>
@@ -683,6 +691,41 @@
             font-size: 0.85rem;
         }
 
+        /* PWA Install Banner */
+        .pwa-install-banner {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--navy);
+            color: white;
+            padding: 12px 20px;
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .pwa-install-banner.show {
+            display: flex;
+        }
+        .pwa-install-banner button {
+            background: var(--gold);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .pwa-install-banner button.close-banner {
+            background: transparent;
+            padding: 4px 8px;
+            font-size: 1.2rem;
+        }
+
         @media (max-width: 768px) {
             :root {
                 --sidebar-w: 240px;
@@ -769,6 +812,15 @@
 </head>
 <body>
 
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+        <span>📱 Install this app for quick access</span>
+        <div>
+            <button onclick="installPWA()">Install</button>
+            <button class="close-banner" onclick="closeInstallBanner()">✕</button>
+        </div>
+    </div>
+
     <div id="loading-overlay">
         <div class="spinner"></div>
         <div id="loading-text">Loading data from Google Sheets...</div>
@@ -783,8 +835,8 @@
                 <div class="sidebar-brand-text">Equip Groceries<br><span>Price Monitoring</span></div>
             </div>
             <div class="sidebar-status">
-                <div class="sidebar-status-dot"></div>
-                <span>Live Data · Google Sheets</span>
+                <div class="sidebar-status-dot" id="online-status-dot"></div>
+                <span id="online-status-text">Live Data · Google Sheets</span>
             </div>
             <nav>
                 <div class="nav-section">
@@ -922,15 +974,125 @@
 
     <script>
         /* ═══════════════════════════════════════════════════════════
+           PWA FUNCTIONALITY
+        ═══════════════════════════════════════════════════════════ */
+        
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('New content available; please refresh.');
+                                    showUpdateNotification();
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // Handle PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallBanner();
+        });
+
+        // Check if app is already installed
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA was installed');
+            deferredPrompt = null;
+            hideInstallBanner();
+        });
+
+        // Show install banner
+        function showInstallBanner() {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner && !sessionStorage.getItem('installBannerDismissed')) {
+                banner.classList.add('show');
+            }
+        }
+
+        function hideInstallBanner() {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) {
+                banner.classList.remove('show');
+            }
+        }
+
+        function closeInstallBanner() {
+            hideInstallBanner();
+            sessionStorage.setItem('installBannerDismissed', 'true');
+        }
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                    hideInstallBanner();
+                });
+            }
+        }
+
+        // Show update notification
+        function showUpdateNotification() {
+            if (confirm('New version available! Update now?')) {
+                window.location.reload();
+            }
+        }
+
+        // Online/Offline status handling
+        function updateOnlineStatus() {
+            const isOnline = navigator.onLine;
+            const statusDot = document.getElementById('online-status-dot');
+            const statusText = document.getElementById('online-status-text');
+            
+            if (statusDot) {
+                statusDot.style.background = isOnline ? '#4ade80' : '#c44b4b';
+            }
+            if (statusText) {
+                statusText.textContent = isOnline ? 'Live Data · Google Sheets' : 'Offline · Cached Data';
+            }
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus(); // Initial check
+
+        // Handle messages from service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.type === 'DATA_UPDATED') {
+                    console.log('New data available from service worker');
+                    refreshAllData();
+                }
+            });
+        }
+
+        /* ═══════════════════════════════════════════════════════════
            CONFIGURATION - Replace with your published Google Sheets CSV URLs
         ═══════════════════════════════════════════════════════════ */
         const CONFIG = {
             constructionSheetURL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2NXMDIXvt7qoiQyuUnYBF7ACqPyQZKcRZUm7A32HwnqYYgc4LX_rziLSuo8y_rKVtRsSyY8ntlJ5y/pub?gid=2080112419&single=true&output=csv',
             localMarketsSheetURL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2NXMDIXvt7qoiQyuUnYBF7ACqPyQZKcRZUm7A32HwnqYYgc4LX_rziLSuo8y_rKVtRsSyY8ntlJ5y/pub?gid=1510501093&single=true&output=csv',
             groceriesBasketSheetURL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2NXMDIXvt7qoiQyuUnYBF7ACqPyQZKcRZUm7A32HwnqYYgc4LX_rziLSuo8y_rKVtRsSyY8ntlJ5y/pub?gid=719955637&single=true&output=csv',
-
-
-
             currency: 'MK',
             autoRefreshInterval: 0,
         };
@@ -1219,9 +1381,9 @@
                 loadingOverlay.classList.add('hidden');
             } catch (error) {
                 console.error('Error loading data:', error);
-                loadingText.textContent = 'Error loading data. Check console. Retrying...';
+                loadingText.textContent = 'Error loading data. Using cached data if available...';
                 loadingText.style.color = '#c44b4b';
-                setTimeout(() => { loadingOverlay.classList.add('hidden'); }, 4000);
+                setTimeout(() => { loadingOverlay.classList.add('hidden'); }, 3000);
             }
         }
 
@@ -1349,7 +1511,6 @@
             }
             const chart = new Chart(ctx, config);
             registerChart(chartKey, chart);
-            // Add ready class for smooth fade-in
             setTimeout(() => { canvas.classList.add('ready'); }, 50);
             return chart;
         }
@@ -1364,30 +1525,25 @@
         const debouncedBuildCompare = debounce(() => buildComparePage(), 150);
 
         function setupFilterListeners() {
-            // Construction filters
             document.getElementById('filter-construction-location')?.addEventListener('change',
             debouncedBuildConstruction);
             document.getElementById('filter-construction-brand')?.addEventListener('change',
             debouncedBuildConstruction);
 
-            // Local Markets filters
             document.getElementById('filter-market-location')?.addEventListener('change',
             debouncedBuildLocalMarkets);
             document.getElementById('filter-market-product')?.addEventListener('change',
             debouncedBuildLocalMarkets);
 
-            // Groceries filters
             document.getElementById('filter-grocery-store')?.addEventListener('change', debouncedBuildGroceries);
             document.getElementById('filter-grocery-product')?.addEventListener('change', debouncedBuildGroceries);
 
-            // Trends filters
             document.getElementById('filter-trends-dataset')?.addEventListener('change', function() {
                 buildTrendsProductFilter();
                 debouncedBuildTrends();
             });
             document.getElementById('filter-trends-product')?.addEventListener('change', debouncedBuildTrends);
 
-            // Compare filters
             document.getElementById('filter-compare-dataset')?.addEventListener('change', function() {
                 buildCompareProductFilter();
                 debouncedBuildCompare();
@@ -1419,7 +1575,6 @@
                 <div class="stat-tile sage"><div class="stat-label">Grocery Stores</div><div class="stat-value">${groceryStores}</div><div class="stat-sub">Supermarkets tracked</div></div>
             `;
 
-            // Cement chart
             const cementSorted = [...construction]
                 .filter(r => r.cementPrice && r.cementPrice > 0)
                 .sort((a, b) => (b.dateRecorded || b.timestamp) - (a.dateRecorded || a.timestamp))
@@ -1449,7 +1604,6 @@
                 });
             }
 
-            // Food comparison
             const latestMarketDate = markets.length > 0 ?
                 markets.reduce((max, r) => (r.dateRecorded || r.timestamp) > max ? (r.dateRecorded || r.timestamp) :
                     max, new Date(0)) : null;
@@ -1491,7 +1645,6 @@
                 });
             }
 
-            // Recent table
             const allRecent = [
                 ...construction.map(r => ({ ...r, dataset: 'Construction', displayDate: r.dateRecorded || r.timestamp,
                     displayVal: r.cementPrice, displayProduct: 'CEMENT (50KG)', displayLocation: r.location })),
@@ -1530,7 +1683,6 @@
                 <div class="stat-tile coral"><div class="stat-label">Max Price</div><div class="stat-value">${formatCurrency(maxPrice)}</div><div class="stat-sub">Highest recorded</div></div>
             `;
 
-            // Trend chart
             const trendData = [...data].filter(r => r.cementPrice && r.cementPrice > 0).reverse();
             if (trendData.length > 0) {
                 createChartSafely('construction-trend', 'chartCementTrend', {
@@ -1554,7 +1706,6 @@
                 });
             }
 
-            // Location chart
             const locGroups = {};
             data.filter(r => r.cementPrice && r.cementPrice > 0).forEach(r => {
                 if (!locGroups[r.location]) locGroups[r.location] = [];
@@ -1589,7 +1740,6 @@
                 });
             }
 
-            // Table
             document.getElementById('construction-table').innerHTML = `
                 <table><thead><tr><th>Date</th><th>Location</th><th>Brand</th><th class="num">Price (MK)</th><th>Responder</th><th>Comments</th></tr></thead>
                 <tbody>${data.map(r => `<tr><td>${formatDate(r.dateRecorded||r.timestamp)}</td><td><span class="tag tag-navy">${r.location||'-'}</span></td><td>${r.cementBrand||'-'}</td><td class="num">${formatCurrency(r.cementPrice)}</td><td>${r.responder||'-'}</td><td>${r.comments||'-'}</td></tr>`).join('')}</tbody></table>`;
@@ -1618,7 +1768,6 @@
                 <div class="stat-tile sage"><div class="stat-label">Avg Price</div><div class="stat-value">${formatCurrency(avgPrice)}</div><div class="stat-sub">Across all products</div></div>
             `;
 
-            // Products chart
             const prodGroups = {};
             data.filter(r => r.price > 0).forEach(r => {
                 if (!prodGroups[r.product]) prodGroups[r.product] = [];
@@ -1652,7 +1801,6 @@
                 });
             }
 
-            // Location chart
             const locPriceGroups = {};
             data.filter(r => r.price > 0).forEach(r => {
                 if (!locPriceGroups[r.location]) locPriceGroups[r.location] = [];
@@ -1684,7 +1832,6 @@
                 });
             }
 
-            // Table
             data.sort((a, b) => (b.dateRecorded || b.timestamp) - (a.dateRecorded || a.timestamp));
             document.getElementById('market-table').innerHTML = `
                 <table><thead><tr><th>Date</th><th>Location</th><th>Product</th><th class="num">Price (MK)</th><th>Responder</th></tr></thead>
@@ -1712,7 +1859,6 @@
                 <div class="stat-tile coral"><div class="stat-label">Price Range</div><div class="stat-value">${validPrices.length>0?formatCurrency(Math.min(...validPrices.map(r=>r.price)))+' - '+formatCurrency(Math.max(...validPrices.map(r=>r.price))):'-'}</div><div class="stat-sub">Min - Max</div></div>
             `;
 
-            // Products chart
             const prodGroups = {};
             data.filter(r => r.price > 0).forEach(r => {
                 if (!prodGroups[r.product]) prodGroups[r.product] = [];
@@ -1746,7 +1892,6 @@
                 });
             }
 
-            // Stores chart
             const storeGroups = {};
             data.filter(r => r.price > 0).forEach(r => {
                 if (!storeGroups[r.location]) storeGroups[r.location] = [];
@@ -1778,7 +1923,6 @@
                 });
             }
 
-            // Table
             data.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             document.getElementById('grocery-table').innerHTML = `
                 <table><thead><tr><th>Date</th><th>Store</th><th>Product</th><th class="num">Price (MK)</th><th>Responder</th></tr></thead>
@@ -1986,8 +2130,8 @@
         }
 
         console.log('🛒 Equip Groceries Dashboard Ready');
+        console.log('📱 PWA functionality active');
         console.log('📋 Replace CONFIG sheet URLs with your published Google Sheets CSV links');
-        console.log('✅ Smooth filtering enabled with debouncing & chart registry');
     </script>
 </body>
 </html>
