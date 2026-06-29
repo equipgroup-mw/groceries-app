@@ -2,7 +2,7 @@
   "name": "Equip Groceries",
   "short_name": "Groceries",
   "description": "Construction, Local Markets & Grocery Basket Price Monitoring",
-  "start_url": "/groceries-app",
+  "start_url": "/groceries-app/",
   "display": "standalone",
   "background_color": "#0d2136",
   "theme_color": "#a8935a",
