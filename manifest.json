@@ -9,13 +9,13 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "assets/appLogo.png",
+      "src": "/groceries-app/assets/appLogo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "assets/appLogo.png",
+      "src": "/groceries-app/assets/appLogo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -23,5 +23,5 @@
   ],
   "categories": ["business", "finance", "utilities"],
   "lang": "en-US",
-  "scope": "/"
+  "scope": "/groceries-app/"
 }
