@@ -1,14 +1,15 @@
+const SCOPE = '/groceries-app';
 const CACHE_NAME = 'equip-groceries-v1';
 const DYNAMIC_CACHE = 'equip-groceries-dynamic-v1';
 const DATA_CACHE = 'equip-groceries-data-v1';
 
-// Assets to cache on install
+// Assets to cache on install - UPDATED PATHS
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/assets/browser.png',
-  '/assets/appLogo.png',
+  SCOPE + '/',
+  SCOPE + '/index.html',
+  SCOPE + '/manifest.json',
+  SCOPE + '/assets/browser.png',
+  SCOPE + '/assets/appLogo.png',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js'
 ];
@@ -25,7 +26,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Caching static assets');
+        console.log('Caching static assets for groceries-app');
         return cache.addAll(STATIC_ASSETS);
       })
       .then(() => self.skipWaiting())
@@ -52,9 +53,15 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch event - handle offline functionality
+// Fetch event - handle offline functionality WITH SCOPE CHECK
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+  
+  // CRITICAL: Only handle requests within /groceries-app/ scope
+  // This prevents interference with other apps
+  if (!event.request.url.includes(SCOPE)) {
+    return; // Let other service workers handle requests outside our scope
+  }
   
   // Handle Google Sheets data requests
   if (DATA_URLS.some(dataUrl => event.request.url.includes(dataUrl.split('/pub?')[1]))) {
@@ -117,7 +124,7 @@ self.addEventListener('fetch', event => {
           .catch(() => {
             // For navigation requests, return the cached index.html
             if (event.request.mode === 'navigate') {
-              return caches.match('/index.html');
+              return caches.match(SCOPE + '/index.html');
             }
             // For other requests that fail, return nothing
             return new Response('Offline - Resource not available', {
@@ -173,4 +180,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('Equip Groceries Service Worker Active');
+console.log('Equip Groceries Service Worker Active - Scope: ' + SCOPE);
