@@ -10,13 +10,13 @@
     <meta name="description" content="Equip Groceries - Construction, Local Markets & Grocery Basket Price Monitoring" />
     <title>Equip Groceries · Price Dashboard</title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json" />
+    <!-- PWA Manifest - UPDATED PATH -->
+    <link rel="manifest" href="/groceries-app/manifest.json" />
     
-    <!-- Favicon and App Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/browser.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="assets/appLogo.png" />
-    <link rel="apple-touch-icon" href="assets/appLogo.png" />
+    <!-- Favicon and App Icons - UPDATED PATHS -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/groceries-app/assets/browser.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/groceries-app/assets/appLogo.png" />
+    <link rel="apple-touch-icon" href="/groceries-app/assets/appLogo.png" />
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js">
     </script>
@@ -974,30 +974,43 @@
 
     <script>
         /* ═══════════════════════════════════════════════════════════
-           PWA FUNCTIONALITY
+           PWA FUNCTIONALITY - UPDATED WITH SCOPE FIXES
         ═══════════════════════════════════════════════════════════ */
         
-        // Register Service Worker
+        const APP_SCOPE = '/groceries-app/';
+        
+        // Register Service Worker with explicit scope
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registered with scope:', registration.scope);
-                        
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('New content available; please refresh.');
-                                    showUpdateNotification();
-                                }
-                            });
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Service Worker registration failed:', error);
+                // First, clean up any service workers with wrong scope
+                navigator.serviceWorker.getRegistrations().then((registrations) => {
+                    registrations.forEach((registration) => {
+                        if (!registration.scope.includes('/groceries-app')) {
+                            console.log('Unregistering service worker with wrong scope:', registration.scope);
+                            registration.unregister();
+                        }
                     });
+                    
+                    // Now register the correct service worker
+                    return navigator.serviceWorker.register(APP_SCOPE + 'sw.js', {
+                        scope: APP_SCOPE
+                    });
+                }).then(registration => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                    
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('New content available; please refresh.');
+                                showUpdateNotification();
+                            }
+                        });
+                    });
+                }).catch(error => {
+                    console.error('Service Worker registration failed:', error);
+                });
             });
         }
 
@@ -2130,7 +2143,7 @@
         }
 
         console.log('🛒 Equip Groceries Dashboard Ready');
-        console.log('📱 PWA functionality active');
+        console.log('📱 PWA functionality active - Scope: ' + APP_SCOPE);
         console.log('📋 Replace CONFIG sheet URLs with your published Google Sheets CSV links');
     </script>
 </body>
